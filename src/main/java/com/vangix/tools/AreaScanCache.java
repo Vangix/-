@@ -1,12 +1,13 @@
 package com.vangix.tools;
 
-import net.minecraft.block.*;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.world.Heightmap;
-import net.minecraft.world.chunk.ChunkSection;
-import net.minecraft.world.chunk.ChunkStatus;
-import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.LevelChunkSection;
+import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.levelgen.Heightmap;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -29,8 +30,8 @@ public class AreaScanCache {
     private static int scanTimer = 0;
     public static int scoreThreshold = 25;
 
-    public static void tick(MinecraftClient client) {
-        if (!FeatureState.areaScanner || client.world == null || client.player == null) {
+    public static void tick(Minecraft client) {
+        if (!FeatureState.areaScanner || client.level == null || client.player == null) {
             return;
         }
 
@@ -41,17 +42,17 @@ public class AreaScanCache {
         scanTimer = 15;
 
         int radius = 5;
-        ChunkPos center = client.player.getChunkPos();
+        ChunkPos center = client.player.chunkPosition();
         Set<Long> seen = new HashSet<>();
 
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
-                int cx = center.x + dx;
-                int cz = center.z + dz;
-                if (!client.world.getChunkManager().isChunkLoaded(cx, cz)) continue;
-                if (!(client.world.getChunk(cx, cz, ChunkStatus.FULL, false) instanceof WorldChunk chunk)) continue;
+                int cx = center.x() + dx;
+                int cz = center.z() + dz;
+                if (!client.level.hasChunk(cx, cz)) continue;
+                if (!(client.level.getChunk(cx, cz, ChunkStatus.FULL, false) instanceof LevelChunk chunk)) continue;
 
-                long key = ChunkPos.toLong(cx, cz);
+                long key = ChunkPos.pack(cx, cz);
                 seen.add(key);
 
                 if (!chunk.isEmpty()) {
@@ -73,16 +74,16 @@ public class AreaScanCache {
         return out;
     }
 
-    private static ScanResult evaluateChunk(WorldChunk chunk) {
+    private static ScanResult evaluateChunk(LevelChunk chunk) {
         int blockScore = 0;
         int terrainScore = 0;
 
         Set<Block> distinctBlocks = new HashSet<>();
         int matchedCount = 0;
 
-        ChunkSection[] sections = chunk.getSectionArray();
-        for (ChunkSection section : sections) {
-            if (section == null || section.isEmpty()) continue;
+        LevelChunkSection[] sections = chunk.getSections();
+        for (LevelChunkSection section : sections) {
+            if (section == null || section.hasOnlyAir()) continue;
 
             for (int x = 0; x < 16; x++) {
                 for (int y = 0; y < 16; y++) {
@@ -110,7 +111,7 @@ public class AreaScanCache {
         int[][] heights = new int[16][16];
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
-                int h = chunk.getHeightmap(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES).get(x, z);
+                int h = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
                 heights[x][z] = h;
                 if (h < minH) minH = h;
                 if (h > maxH) maxH = h;
@@ -155,8 +156,8 @@ public class AreaScanCache {
                 || block instanceof BeaconBlock
                 || block instanceof BrewingStandBlock
                 || block instanceof BedBlock
-                || block instanceof CarpetBlock
-                || block instanceof AbstractGlassBlock
+                || block instanceof WoolCarpetBlock
+                || block instanceof TransparentBlock
                 || block instanceof TorchBlock
                 || block instanceof WallTorchBlock
                 || block instanceof LanternBlock
@@ -165,10 +166,10 @@ public class AreaScanCache {
                 || block instanceof HopperBlock
                 || block instanceof DispenserBlock
                 || block instanceof DropperBlock
-                || block instanceof RedstoneWireBlock
+                || block instanceof RedStoneWireBlock
                 || block instanceof RepeaterBlock
                 || block instanceof ComparatorBlock
                 || block instanceof ObserverBlock
-                || block instanceof PistonBlock;
+                || block instanceof PistonBaseBlock;
     }
 }

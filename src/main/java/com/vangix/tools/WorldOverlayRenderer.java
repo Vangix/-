@@ -5,8 +5,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.*;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 
 import java.util.ArrayList;
@@ -47,20 +51,42 @@ public class WorldOverlayRenderer {
                     if (!mc.level.hasChunk(cx, cz)) continue;
                     if (!(mc.level.getChunk(cx, cz, ChunkStatus.FULL, false) instanceof LevelChunk chunk)) continue;
 
+                    // 1. Контейнеры и спавнеры (включая кастомные спавнеры на донат-SMP)
                     for (BlockEntity be : chunk.getBlockEntities().values()) {
-                        float[] rgba = matchBlockColor(be);
+                        float[] rgba = matchBlockEntityColor(be);
                         if (rgba != null) {
-                            TargetBox box = new TargetBox(
-                                    be.getBlockPos().immutable(),
-                                    rgba[0], rgba[1], rgba[2],
-                                    0.24f,
-                                    0.95f
-                            );
-                            if (needEsp) {
-                                BLOCK_TARGETS.add(box);
-                            }
-                            if (needBlockTracers) {
-                                TRACER_BLOCK_TARGETS.add(box);
+                            addTarget(be.getBlockPos().immutable(), rgba, needEsp, needBlockTracers);
+                        }
+                    }
+
+                    // 2. Алмазный, незеритовый, изумрудный блоки, редстоун-блоки и gilded blackstone
+                    if (FeatureState.filterDiamondBlocks
+                            || FeatureState.filterNetheriteBlocks
+                            || FeatureState.filterEmeraldBlocks
+                            || FeatureState.filterRedstoneBlocks
+                            || FeatureState.filterGildedBlackstone) {
+                        int minWorldY = chunk.getMinY();
+                        LevelChunkSection[] sections = chunk.getSections();
+                        int baseX = cx * 16;
+                        int baseZ = cz * 16;
+
+                        for (int sIdx = 0; sIdx < sections.length; sIdx++) {
+                            LevelChunkSection section = sections[sIdx];
+                            if (section == null || section.hasOnlyAir()) continue;
+                            int sectionBottomY = minWorldY + sIdx * 16;
+
+                            for (int x = 0; x < 16; x++) {
+                                for (int y = 0; y < 16; y++) {
+                                    int worldY = sectionBottomY + y;
+                                    for (int z = 0; z < 16; z++) {
+                                        BlockState state = section.getBlockState(x, y, z);
+                                        if (state.isAir()) continue;
+                                        float[] rgba = matchBlockStateColor(state.getBlock());
+                                        if (rgba != null) {
+                                            addTarget(new BlockPos(baseX + x, worldY, baseZ + z), rgba, needEsp, needBlockTracers);
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -78,21 +104,42 @@ public class WorldOverlayRenderer {
         }
     }
 
-    private static float[] matchBlockColor(BlockEntity be) {
-        if (FeatureState.filterContainers && (be instanceof ChestBlockEntity || be instanceof BarrelBlockEntity)) {
-            return new float[]{1.0f, 0.65f, 0.05f};
+    private static void addTarget(BlockPos pos, float[] rgba, boolean needEsp, boolean needBlockTracers) {
+        TargetBox box = new TargetBox(pos, rgba[0], rgba[1], rgba[2], 0.24f, 0.95f);
+        if (needEsp) {
+            BLOCK_TARGETS.add(box);
         }
-        if (FeatureState.filterShulkers && be instanceof ShulkerBoxBlockEntity) {
-            return new float[]{0.85f, 0.25f, 1.0f};
+        if (needBlockTracers) {
+            TRACER_BLOCK_TARGETS.add(box);
         }
-        if (FeatureState.filterLogicBlocks && be instanceof CommandBlockEntity) {
-            return new float[]{0.15f, 0.85f, 1.0f};
+    }
+
+    private static float[] matchBlockEntityColor(BlockEntity be) {
+        if (FeatureState.filterStorage
+                && (be instanceof ChestBlockEntity || be instanceof BarrelBlockEntity || be instanceof ShulkerBoxBlockEntity)) {
+            return new float[]{1.0f, 0.65f, 0.05f}; // Янтарно-оранжевый: сундуки, бочки, шалкера
         }
-        if (FeatureState.filterSpawners && be instanceof SpawnerBlockEntity) {
-            return new float[]{1.0f, 0.2f, 0.2f};
+        if (FeatureState.filterCustomSpawners && be instanceof SpawnerBlockEntity) {
+            return new float[]{1.0f, 0.2f, 0.35f};  // Ярко-красный: спавнеры (в т.ч. кастомные)
         }
-        if (FeatureState.filterVaultBlocks && be instanceof EnderChestBlockEntity) {
-            return new float[]{0.2f, 1.0f, 0.7f};
+        return null;
+    }
+
+    private static float[] matchBlockStateColor(Block block) {
+        if (FeatureState.filterDiamondBlocks && block == Blocks.DIAMOND_BLOCK) {
+            return new float[]{0.2f, 0.9f, 1.0f};   // Голубой: алмазный блок
+        }
+        if (FeatureState.filterNetheriteBlocks && block == Blocks.NETHERITE_BLOCK) {
+            return new float[]{0.35f, 0.22f, 0.45f};// Тёмно-фиолетовый: незеритовый блок
+        }
+        if (FeatureState.filterEmeraldBlocks && block == Blocks.EMERALD_BLOCK) {
+            return new float[]{0.15f, 0.95f, 0.45f};// Изумрудно-зелёный: изумрудный блок
+        }
+        if (FeatureState.filterRedstoneBlocks && block == Blocks.REDSTONE_BLOCK) {
+            return new float[]{0.95f, 0.15f, 0.15f};// Насыщенный красный: редстоун-блок
+        }
+        if (FeatureState.filterGildedBlackstone && block == Blocks.GILDED_BLACKSTONE) {
+            return new float[]{0.85f, 0.65f, 0.15f};// Золотистый: gilded blackstone
         }
         return null;
     }

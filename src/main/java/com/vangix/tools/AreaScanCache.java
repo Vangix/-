@@ -18,10 +18,12 @@ public class AreaScanCache {
 
     public static class ScanResult {
         public final int score;
+        public final int undergroundMatches;
         public final String summary;
 
-        public ScanResult(int score, String summary) {
+        public ScanResult(int score, int undergroundMatches, String summary) {
             this.score = score;
+            this.undergroundMatches = undergroundMatches;
             this.summary = summary;
         }
     }
@@ -75,18 +77,32 @@ public class AreaScanCache {
     }
 
     private static ScanResult evaluateChunk(LevelChunk chunk) {
-        int blockScore = 0;
-        int terrainScore = 0;
+        int[][] surfaceHeights = new int[16][16];
+        int minH = Integer.MAX_VALUE;
+        int maxH = Integer.MIN_VALUE;
+
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                int h = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                surfaceHeights[x][z] = h;
+                if (h < minH) minH = h;
+                if (h > maxH) maxH = h;
+            }
+        }
 
         Set<Block> distinctBlocks = new HashSet<>();
         int matchedCount = 0;
+        int undergroundMatches = 0;
+        int baseScore = 0;
 
         LevelChunkSection[] sections = chunk.getSections();
         for (LevelChunkSection section : sections) {
             if (section == null || section.hasOnlyAir()) continue;
+            int sectionBottomY = section.bottomBlockY();
 
             for (int x = 0; x < 16; x++) {
                 for (int y = 0; y < 16; y++) {
+                    int worldY = sectionBottomY + y;
                     for (int z = 0; z < 16; z++) {
                         BlockState state = section.getBlockState(x, y, z);
                         if (state.isAir()) continue;
@@ -95,53 +111,56 @@ public class AreaScanCache {
                         if (isNotableBlock(block)) {
                             matchedCount++;
                             distinctBlocks.add(block);
+
+                            boolean isUnderground = worldY < surfaceHeights[x][z] - 3 || worldY < 56;
+                            if (isUnderground) {
+                                undergroundMatches++;
+                                baseScore += getBlockWeight(block) + 3;
+                            } else {
+                                baseScore += getBlockWeight(block);
+                            }
                         }
                     }
                 }
             }
         }
 
-        blockScore += matchedCount * 2;
-        blockScore += distinctBlocks.size() * 4;
+        baseScore += distinctBlocks.size() * 4;
 
-        int minH = Integer.MAX_VALUE;
-        int maxH = Integer.MIN_VALUE;
         int abruptSteps = 0;
-
-        int[][] heights = new int[16][16];
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
-                int h = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-                heights[x][z] = h;
-                if (h < minH) minH = h;
-                if (h > maxH) maxH = h;
-            }
-        }
-
-        for (int x = 0; x < 16; x++) {
-            for (int z = 0; z < 16; z++) {
-                int h = heights[x][z];
-                if (x + 1 < 16 && Math.abs(h - heights[x + 1][z]) >= 8) {
+                int h = surfaceHeights[x][z];
+                if (x + 1 < 16 && Math.abs(h - surfaceHeights[x + 1][z]) >= 8) {
                     abruptSteps++;
                 }
-                if (z + 1 < 16 && Math.abs(h - heights[x][z + 1]) >= 8) {
+                if (z + 1 < 16 && Math.abs(h - surfaceHeights[x][z + 1]) >= 8) {
                     abruptSteps++;
                 }
             }
         }
 
+        int terrainScore = 0;
         if (maxH - minH >= 24 && abruptSteps >= 12) {
             terrainScore += 15;
         } else if (abruptSteps >= 20) {
             terrainScore += 10;
         }
 
-        int total = blockScore + terrainScore;
-        String summary = "Blocks: " + matchedCount
-                + " (types: " + distinctBlocks.size() + ")"
-                + (terrainScore > 0 ? ", Terrain+" + terrainScore : "");
+        int total = baseScore + terrainScore;
+        String summary = "UG:" + undergroundMatches + "/" + matchedCount
+                + " (types:" + distinctBlocks.size() + ")"
+                + (terrainScore > 0 ? ", Terr+" + terrainScore : "");
 
-        return new ScanResult(total, summary);
+        return new ScanResult(total, undergroundMatches, summary);
+    }
+
+    private static int getBlockWeight(Block block) {
+        if (block instanceof ShulkerBoxBlock || block instanceof BeaconBlock) return 8;
+        if (block instanceof ChestBlock || block instanceof BarrelBlock || block instanceof EnderChestBlock) return 5;
+        if (block instanceof SpawnerBlock || block instanceof CommandBlock || block instanceof StructureBlock) return 6;
+        if (block instanceof HopperBlock || block instanceof ObserverBlock || block instanceof ComparatorBlock || block instanceof RepeaterBlock) return 3;
+        return 2;
     }
 
     private static boolean isNotableBlock(Block block) {

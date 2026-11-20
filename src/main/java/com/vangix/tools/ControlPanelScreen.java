@@ -84,11 +84,13 @@ public class ControlPanelScreen extends Screen {
                         new BoolOption("Show Gear", () -> FeatureState.showEntityGear, v -> FeatureState.showEntityGear = v)
                 )),
                 new ToolRow("Block ESP", () -> FeatureState.containerSight, v -> FeatureState.containerSight = v, List.of(
-                        new BoolOption("Chests / Barrels", () -> FeatureState.filterContainers, v -> FeatureState.filterContainers = v),
-                        new BoolOption("Shulkers", () -> FeatureState.filterShulkers, v -> FeatureState.filterShulkers = v),
-                        new BoolOption("Command Blocks", () -> FeatureState.filterLogicBlocks, v -> FeatureState.filterLogicBlocks = v),
-                        new BoolOption("Spawners", () -> FeatureState.filterSpawners, v -> FeatureState.filterSpawners = v),
-                        new BoolOption("Ender Chests", () -> FeatureState.filterVaultBlocks, v -> FeatureState.filterVaultBlocks = v)
+                        new BoolOption("Chests / Barrels / Shulkers", () -> FeatureState.filterStorage, v -> FeatureState.filterStorage = v),
+                        new BoolOption("Diamond Block", () -> FeatureState.filterDiamondBlocks, v -> FeatureState.filterDiamondBlocks = v),
+                        new BoolOption("Netherite Block", () -> FeatureState.filterNetheriteBlocks, v -> FeatureState.filterNetheriteBlocks = v),
+                        new BoolOption("Emerald Block", () -> FeatureState.filterEmeraldBlocks, v -> FeatureState.filterEmeraldBlocks = v),
+                        new BoolOption("Redstone Blocks", () -> FeatureState.filterRedstoneBlocks, v -> FeatureState.filterRedstoneBlocks = v),
+                        new BoolOption("Gilded Blackstone", () -> FeatureState.filterGildedBlackstone, v -> FeatureState.filterGildedBlackstone = v),
+                        new BoolOption("Custom Spawners", () -> FeatureState.filterCustomSpawners, v -> FeatureState.filterCustomSpawners = v)
                 )),
                 new ToolRow("Tracers", () -> FeatureState.lineGuides, v -> FeatureState.lineGuides = v, List.of(
                         new BoolOption("Block Tracers", () -> FeatureState.tracerBlocks, v -> FeatureState.tracerBlocks = v),

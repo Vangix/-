@@ -17,11 +17,13 @@ public class FeatureState {
     public static boolean showEntityTag = true;
     public static boolean showEntityGear = true;
 
-    public static boolean filterContainers = true;
-    public static boolean filterShulkers = true;
-    public static boolean filterLogicBlocks = true;
-    public static boolean filterSpawners = true;
-    public static boolean filterVaultBlocks = true;
+    public static boolean filterStorage = true;        // Сундуки, бочки, шалкера
+    public static boolean filterDiamondBlocks = true;  // Алмазный блок
+    public static boolean filterNetheriteBlocks = true;// Незеритовый блок
+    public static boolean filterEmeraldBlocks = true;  // Изумрудный блок
+    public static boolean filterRedstoneBlocks = true; // Редстоун-блоки
+    public static boolean filterGildedBlackstone = true;// Gilded blackstone
+    public static boolean filterCustomSpawners = true; // Спавнера (кастомные / донат-SMP)
 
     public static boolean tracerBlocks = true;
 

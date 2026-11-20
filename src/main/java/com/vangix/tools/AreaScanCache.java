@@ -166,10 +166,10 @@ public class AreaScanCache {
                 || block instanceof HopperBlock
                 || block instanceof DispenserBlock
                 || block instanceof DropperBlock
-                || block instanceof RedStoneWireBlock
+                || block instanceof RedstoneWireBlock
                 || block instanceof RepeaterBlock
                 || block instanceof ComparatorBlock
                 || block instanceof ObserverBlock
-                || block instanceof PistonBaseBlock;
+                || block instanceof PistonBlock;
     }
 }

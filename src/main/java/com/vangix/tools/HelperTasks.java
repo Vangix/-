@@ -3,7 +3,6 @@ package com.vangix.tools;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.BlockState;
@@ -98,16 +97,7 @@ public class HelperTasks {
         }
         if (targetSlot == -1 || client.gameMode == null) return;
 
-        int containerId = client.player.inventoryMenu.containerId;
-        int containerSlot = targetSlot < 9 ? targetSlot + 36 : targetSlot;
-        int offhandSlot = 45;
-
-        client.gameMode.handleInventoryMouseClick(containerId, containerSlot, 0, ContainerInput.PICKUP, client.player);
-        client.gameMode.handleInventoryMouseClick(containerId, offhandSlot, 0, ContainerInput.PICKUP, client.player);
-        if (!client.player.inventoryMenu.getCarried().isEmpty()) {
-            client.gameMode.handleInventoryMouseClick(containerId, containerSlot, 0, ContainerInput.PICKUP, client.player);
-        }
-
+        // TODO: уточнить метод клика по контейнеру у MultiPlayerGameMode для 26.3
         guardTimer = nextGuardDelay();
     }
 }

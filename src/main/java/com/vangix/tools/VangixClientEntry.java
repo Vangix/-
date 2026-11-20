@@ -46,9 +46,10 @@ public class VangixClientEntry implements ClientModInitializer {
 
         boolean isDown = menuBind != null && menuBind.isDown();
         if (isDown && !wasDown) {
-            if (client.gui.screen() == null) {
+            var currentScreen = client.gui.screen();
+            if (currentScreen == null) {
                 client.gui.setScreen(new ControlPanelScreen());
-            } else if (client.gui.screen() instanceof ControlPanelScreen) {
+            } else if (currentScreen instanceof ControlPanelScreen) {
                 client.gui.setScreen(null);
             }
         }

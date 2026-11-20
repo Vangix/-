@@ -1,23 +1,72 @@
 package com.vangix.tools;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.entity.*;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class WorldOverlayRenderer {
 
-    public static void render() {
-        Minecraft mc = Minecraft.getInstance();
+    public record TargetBox(BlockPos pos, float r, float g, float b, float fillAlpha, float lineAlpha) {}
+
+    private static final List<TargetBox> BLOCK_TARGETS = new ArrayList<>();
+    private static final List<TargetBox> TRACER_BLOCK_TARGETS = new ArrayList<>();
+
+    public static List<TargetBox> getBlockTargets() {
+        return BLOCK_TARGETS;
+    }
+
+    public static List<TargetBox> getTracerBlockTargets() {
+        return TRACER_BLOCK_TARGETS;
+    }
+
+    public static void collectTargets(Minecraft mc) {
+        BLOCK_TARGETS.clear();
+        TRACER_BLOCK_TARGETS.clear();
         if (mc.level == null || mc.player == null) return;
+
+        boolean needEsp = FeatureState.containerSight;
+        boolean needBlockTracers = FeatureState.lineGuides && FeatureState.tracerBlocks;
+
+        if (needEsp || needBlockTracers) {
+            int radius = 4;
+            int centerX = mc.player.chunkPosition().x();
+            int centerZ = mc.player.chunkPosition().z();
+
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    int cx = centerX + dx;
+                    int cz = centerZ + dz;
+                    if (!mc.level.hasChunk(cx, cz)) continue;
+                    if (!(mc.level.getChunk(cx, cz, ChunkStatus.FULL, false) instanceof LevelChunk chunk)) continue;
+
+                    for (BlockEntity be : chunk.getBlockEntities().values()) {
+                        float[] rgba = matchBlockColor(be);
+                        if (rgba != null) {
+                            TargetBox box = new TargetBox(
+                                    be.getBlockPos().immutable(),
+                                    rgba[0], rgba[1], rgba[2],
+                                    0.24f,
+                                    0.95f
+                            );
+                            if (needEsp) {
+                                BLOCK_TARGETS.add(box);
+                            }
+                            if (needBlockTracers) {
+                                TRACER_BLOCK_TARGETS.add(box);
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         if (FeatureState.entitySight || FeatureState.lineGuides) {
             for (Player player : mc.level.players()) {
@@ -27,40 +76,11 @@ public class WorldOverlayRenderer {
                 }
             }
         }
-
-        if (FeatureState.containerSight) {
-            int radius = 4;
-            int centerX = mc.player.chunkPosition().x();
-            int centerZ = mc.player.chunkPosition().z();
-            for (int dx = -radius; dx <= radius; dx++) {
-                for (int dz = -radius; dz <= radius; dz++) {
-                    int cx = centerX + dx;
-                    int cz = centerZ + dz;
-                    if (!mc.level.hasChunk(cx, cz)) continue;
-                    if (!(mc.level.getChunk(cx, cz, ChunkStatus.FULL, false) instanceof LevelChunk chunk)) continue;
-                    for (BlockEntity be : chunk.getBlockEntities().values()) {
-                        matchBlockColor(be);
-                    }
-                }
-            }
-        }
-
-        if (FeatureState.areaScanner) {
-            Map<Long, AreaScanCache.ScanResult> flagged = AreaScanCache.getFlaggedChunks();
-            for (Map.Entry<Long, AreaScanCache.ScanResult> entry : flagged.entrySet()) {
-                long packed = entry.getKey();
-                int cx = ChunkPos.getX(packed);
-                int cz = ChunkPos.getZ(packed);
-                int minBlockX = cx * 16;
-                int minBlockZ = cz * 16;
-                if (minBlockX == Integer.MIN_VALUE && minBlockZ == Integer.MIN_VALUE) continue;
-            }
-        }
     }
 
     private static float[] matchBlockColor(BlockEntity be) {
         if (FeatureState.filterContainers && (be instanceof ChestBlockEntity || be instanceof BarrelBlockEntity)) {
-            return new float[]{1.0f, 0.65f, 0.0f};
+            return new float[]{1.0f, 0.65f, 0.05f};
         }
         if (FeatureState.filterShulkers && be instanceof ShulkerBoxBlockEntity) {
             return new float[]{0.85f, 0.25f, 1.0f};

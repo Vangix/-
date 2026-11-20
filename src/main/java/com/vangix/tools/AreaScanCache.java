@@ -95,10 +95,12 @@ public class AreaScanCache {
         int undergroundMatches = 0;
         int baseScore = 0;
 
+        int minWorldY = chunk.getMinY();
         LevelChunkSection[] sections = chunk.getSections();
-        for (LevelChunkSection section : sections) {
+        for (int sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
+            LevelChunkSection section = sections[sectionIdx];
             if (section == null || section.hasOnlyAir()) continue;
-            int sectionBottomY = section.bottomBlockY();
+            int sectionBottomY = minWorldY + sectionIdx * 16;
 
             for (int x = 0; x < 16; x++) {
                 for (int y = 0; y < 16; y++) {

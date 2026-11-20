@@ -18,10 +18,10 @@ public class VangixClientEntry implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        InputConstants.Key rightShift = InputConstants.Type.KEYSYM.getOrCreate(344);
+        InputConstants.Key rightShift = InputConstants.getKey("key.keyboard.right.shift");
         menuBind = new KeyMapping(
                 "key.vangixs_tools.menu",
-                InputConstants.Type.KEYSYM,
+                rightShift.getType(),
                 rightShift.getValue(),
                 KeyMapping.Category.MISC
         );
@@ -46,10 +46,10 @@ public class VangixClientEntry implements ClientModInitializer {
 
         boolean isDown = menuBind != null && menuBind.isDown();
         if (isDown && !wasDown) {
-            if (client.screen == null) {
-                client.setScreen(new ControlPanelScreen());
-            } else if (client.screen instanceof ControlPanelScreen) {
-                client.setScreen(null);
+            if (client.gui.screen() == null) {
+                client.gui.setScreen(new ControlPanelScreen());
+            } else if (client.gui.screen() instanceof ControlPanelScreen) {
+                client.gui.setScreen(null);
             }
         }
         wasDown = isDown;

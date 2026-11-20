@@ -2,6 +2,7 @@ package com.vangix.tools;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -77,11 +78,11 @@ public class HelperTasks {
 
         for (String label : enabled) {
             int textWidth = mc.font.width(label);
-            int x = screenWidth - textWidth - 8;
+            int x = screenWidth - textWidth - 10;
 
-            context.fill(x - 4, y - 2, screenWidth - 4, y + 10, 0x990B101B);
+            context.fill(x - 4, y - 2, screenWidth - 4, y + 10, 0xA80B101B);
             context.fill(screenWidth - 5, y - 2, screenWidth - 4, y + 10, color);
-            context.text(mc.font, label, x - 1, y, color);
+            context.text(mc.font, Component.literal(label), x - 1, y, color);
             y += 12;
         }
     }

@@ -23,6 +23,8 @@ public class FeatureState {
     public static boolean filterSpawners = true;
     public static boolean filterVaultBlocks = true;
 
+    public static boolean tracerBlocks = true;
+
     public static int minGuardDelay = 2;
     public static int maxGuardDelay = 5;
 

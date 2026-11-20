@@ -91,6 +91,7 @@ public class ControlPanelScreen extends Screen {
                         new BoolOption("Ender Chests", () -> FeatureState.filterVaultBlocks, v -> FeatureState.filterVaultBlocks = v)
                 )),
                 new ToolRow("Tracers", () -> FeatureState.lineGuides, v -> FeatureState.lineGuides = v, List.of(
+                        new BoolOption("Block Tracers", () -> FeatureState.tracerBlocks, v -> FeatureState.tracerBlocks = v),
                         new CycleOption("Color", FeatureState::getGuideColorName, FeatureState::getGuideColor, FeatureState::cycleGuideColor)
                 )),
                 new ToolRow("HUD", () -> FeatureState.statusHud, v -> FeatureState.statusHud = v, List.of(

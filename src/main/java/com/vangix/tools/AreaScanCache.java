@@ -170,6 +170,6 @@ public class AreaScanCache {
                 || block instanceof RepeaterBlock
                 || block instanceof ComparatorBlock
                 || block instanceof ObserverBlock
-                || block instanceof PistonBlock;
+                || block instanceof PistonMovingBlock;
     }
 }

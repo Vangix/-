@@ -169,7 +169,6 @@ public class AreaScanCache {
                 || block instanceof RedstoneWireBlock
                 || block instanceof RepeaterBlock
                 || block instanceof ComparatorBlock
-                || block instanceof ObserverBlock
-                || block instanceof PistonMovingBlock;
+                || block instanceof ObserverBlock;
     }
 }

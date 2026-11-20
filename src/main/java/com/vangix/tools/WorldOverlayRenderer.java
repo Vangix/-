@@ -48,8 +48,9 @@ public class WorldOverlayRenderer {
         if (FeatureState.areaScanner) {
             Map<Long, AreaScanCache.ScanResult> flagged = AreaScanCache.getFlaggedChunks();
             for (Map.Entry<Long, AreaScanCache.ScanResult> entry : flagged.entrySet()) {
-                int cx = ChunkPos.x(entry.getKey());
-                int cz = ChunkPos.z(entry.getKey());
+                long packed = entry.getKey();
+                int cx = ChunkPos.getX(packed);
+                int cz = ChunkPos.getZ(packed);
                 int minBlockX = cx * 16;
                 int minBlockZ = cz * 16;
                 if (minBlockX == Integer.MIN_VALUE && minBlockZ == Integer.MIN_VALUE) continue;

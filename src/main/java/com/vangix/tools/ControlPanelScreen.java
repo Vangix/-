@@ -11,6 +11,17 @@ import java.util.function.Supplier;
 
 public class ControlPanelScreen extends Screen {
 
+    private static final int COL_WIDTH = 192;
+    private static final int COL_GAP = 20;
+    private static final int TOP_BASE_Y = 38;
+    private static final int HEADER_HEIGHT = 26;
+    private static final int ROW_HEIGHT = 21;
+    private static final int ROW_GAP = 2;
+    private static final int SUB_ROW_HEIGHT = 16;
+    private static final int SUB_BOTTOM_PAD = 4;
+    private static final int ARROW_WIDTH = 17;
+    private static final int ARROW_GAP = 2;
+
     private sealed interface SubOption permits BoolOption, CycleOption {}
 
     private record BoolOption(String label, Supplier<Boolean> getter, Consumer<Boolean> setter) implements SubOption {}
@@ -50,8 +61,6 @@ public class ControlPanelScreen extends Screen {
         }
     }
 
-    private record ClickArea(int x1, int y1, int x2, int y2, int button, Runnable action) {}
-
     private static final Map<String, List<ToolRow>> PANELS = new LinkedHashMap<>();
 
     static {
@@ -83,7 +92,6 @@ public class ControlPanelScreen extends Screen {
         ));
     }
 
-    private final List<ClickArea> clickAreas = new ArrayList<>();
     private float openAnim = 0.0f;
 
     public ControlPanelScreen() {
@@ -124,16 +132,25 @@ public class ControlPanelScreen extends Screen {
         return (newAlpha << 24) | (argb & 0x00FFFFFF);
     }
 
+    private int getStartX() {
+        int totalWidth = PANELS.size() * COL_WIDTH + (PANELS.size() - 1) * COL_GAP;
+        return Math.max(8, (this.width - totalWidth) / 2);
+    }
+
     private void toggleRow(ToolRow row) {
         boolean next = !Boolean.TRUE.equals(row.getter.get());
         row.setter.accept(next);
-        System.out.println("[Vangix] " + row.title + ": " + (next ? "ON" : "OFF"));
+        System.out.println("[Vangix] TOGGLE " + row.title + " -> " + (next ? "ON" : "OFF"));
+    }
+
+    private void toggleExpand(ToolRow row) {
+        if (row.options.isEmpty()) return;
+        row.expanded = !row.expanded;
+        System.out.println("[Vangix] EXPAND " + row.title + " -> " + row.expanded);
     }
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        clickAreas.clear();
-
         float step = Math.min(0.45f, Math.max(0.08f, delta * 0.24f));
         openAnim = approach(openAnim, 1.0f, step * 0.95f);
         float easedOpen = easeOutCubic(openAnim);
@@ -179,13 +196,8 @@ public class ControlPanelScreen extends Screen {
                 withAlpha(activeCount > 0 ? 0xFF86EFAC : 0xFF94A3B8, easedOpen)
         );
 
-        int colWidth = 192;
-        int gap = 20;
-        int totalWidth = PANELS.size() * colWidth + (PANELS.size() - 1) * gap;
-        int startX = Math.max(8, (this.width - totalWidth) / 2);
-        int baseStartY = 38 + Math.round((1.0f - easedOpen) * 12.0f);
-        int rowHeight = 21;
-        int subRowHeight = 16;
+        int startX = getStartX();
+        int baseStartY = TOP_BASE_Y + Math.round((1.0f - easedOpen) * 12.0f);
 
         int panelIndex = 0;
         for (Map.Entry<String, List<ToolRow>> entry : PANELS.entrySet()) {
@@ -200,57 +212,57 @@ public class ControlPanelScreen extends Screen {
                 row.expandAnim = approach(row.expandAnim, row.expanded ? 1.0f : 0.0f, step * 1.15f);
 
                 float easedExpand = easeOutCubic(row.expandAnim);
-                dynamicContentHeight += rowHeight + 2;
+                dynamicContentHeight += ROW_HEIGHT + ROW_GAP;
                 if (!row.options.isEmpty() && easedExpand > 0.001f) {
-                    dynamicContentHeight += (row.options.size() * subRowHeight + 4) * easedExpand;
+                    dynamicContentHeight += (row.options.size() * SUB_ROW_HEIGHT + SUB_BOTTOM_PAD) * easedExpand;
                 }
             }
 
-            int panelHeight = 26 + Math.round(dynamicContentHeight) + 6;
-            int colX = startX + panelIndex * (colWidth + gap);
+            int panelHeight = HEADER_HEIGHT + Math.round(dynamicContentHeight) + 6;
+            int colX = startX + panelIndex * (COL_WIDTH + COL_GAP);
             int colY = baseStartY;
 
             int accentColor = panelIndex == 0 ? 0xFF38BDF8 : 0xFFA855F7;
 
-            context.fill(colX + 3, colY + 3, colX + colWidth + 3, colY + panelHeight + 3, withAlpha(0x88000000, easedOpen));
-            context.fill(colX, colY, colX + colWidth, colY + panelHeight, withAlpha(0xEE111520, easedOpen));
-            drawFrame(context, colX, colY, colWidth, panelHeight, withAlpha(0xFF2B3548, easedOpen));
+            context.fill(colX + 3, colY + 3, colX + COL_WIDTH + 3, colY + panelHeight + 3, withAlpha(0x88000000, easedOpen));
+            context.fill(colX, colY, colX + COL_WIDTH, colY + panelHeight, withAlpha(0xEE111520, easedOpen));
+            drawFrame(context, colX, colY, COL_WIDTH, panelHeight, withAlpha(0xFF2B3548, easedOpen));
 
-            context.fill(colX + 1, colY + 1, colX + colWidth - 1, colY + 21, withAlpha(0xFF171D2B, easedOpen));
-            context.fill(colX + 1, colY + 1, colX + colWidth - 1, colY + 3, withAlpha(accentColor, easedOpen));
+            context.fill(colX + 1, colY + 1, colX + COL_WIDTH - 1, colY + 21, withAlpha(0xFF171D2B, easedOpen));
+            context.fill(colX + 1, colY + 1, colX + COL_WIDTH - 1, colY + 3, withAlpha(accentColor, easedOpen));
             context.centeredText(
                     this.font,
                     Component.literal(header),
-                    colX + colWidth / 2,
+                    colX + COL_WIDTH / 2,
                     colY + 8,
                     withAlpha(0xFFF8FAFC, easedOpen)
             );
-            context.fill(colX + 1, colY + 21, colX + colWidth - 1, colY + 22, withAlpha(0xFF283246, easedOpen));
+            context.fill(colX + 1, colY + 21, colX + COL_WIDTH - 1, colY + 22, withAlpha(0xFF283246, easedOpen));
 
-            float yCursor = colY + 26.0f;
+            float yCursor = colY + HEADER_HEIGHT;
 
             for (ToolRow row : rows) {
                 int y = Math.round(yCursor);
                 boolean hasSub = !row.options.isEmpty();
-                int arrowW = hasSub ? 17 : 0;
-                int mainRight = colX + colWidth - 5 - arrowW;
+                int arrowSlotW = hasSub ? (ARROW_WIDTH + ARROW_GAP) : 0;
+                int mainRight = colX + COL_WIDTH - 5 - arrowSlotW;
 
                 boolean hoveredMain = mouseX >= colX + 5 && mouseX <= mainRight
-                        && mouseY >= y && mouseY < y + rowHeight;
+                        && mouseY >= y && mouseY < y + ROW_HEIGHT;
                 row.mainHoverAnim = approach(row.mainHoverAnim, hoveredMain ? 1.0f : 0.0f, step * 1.5f);
 
                 boolean active = Boolean.TRUE.equals(row.getter.get());
                 float easedActive = easeOutCubic(row.activeAnim);
 
-                context.fill(colX + 5, y, mainRight, y + rowHeight, withAlpha(0xFF181E2C, easedOpen));
+                context.fill(colX + 5, y, mainRight, y + ROW_HEIGHT, withAlpha(0xFF181E2C, easedOpen));
                 if (easedActive > 0.01f) {
-                    context.fill(colX + 5, y, mainRight, y + rowHeight, withAlpha(0x2822C55E, easedActive * easedOpen));
-                    context.fill(colX + 5, y, colX + 7, y + rowHeight, withAlpha(0xFF22C55E, easedActive * easedOpen));
+                    context.fill(colX + 5, y, mainRight, y + ROW_HEIGHT, withAlpha(0x2822C55E, easedActive * easedOpen));
+                    context.fill(colX + 5, y, colX + 7, y + ROW_HEIGHT, withAlpha(0xFF22C55E, easedActive * easedOpen));
                 }
                 if (row.mainHoverAnim > 0.01f) {
-                    context.fill(colX + 5, y, mainRight, y + rowHeight, withAlpha(0x26FFFFFF, row.mainHoverAnim * easedOpen));
+                    context.fill(colX + 5, y, mainRight, y + ROW_HEIGHT, withAlpha(0x26FFFFFF, row.mainHoverAnim * easedOpen));
                 }
-                drawFrame(context, colX + 5, y, mainRight - (colX + 5), rowHeight,
+                drawFrame(context, colX + 5, y, mainRight - (colX + 5), ROW_HEIGHT,
                         withAlpha(active ? 0x4422C55E : 0xFF252F42, easedOpen));
 
                 int titleX = colX + (active ? 11 : 10);
@@ -278,30 +290,19 @@ public class ControlPanelScreen extends Screen {
                 int knobX = toggleX + 1 + Math.round(travel * easedKnob);
                 context.fill(knobX, toggleY + 1, knobX + toggleH - 2, toggleY + toggleH - 1, withAlpha(0xFFFFFFFF, easedOpen));
 
-                // ЛКМ по основной части строки или тумблеру включает/выключает функцию
-                clickAreas.add(new ClickArea(colX + 5, y, mainRight, y + rowHeight, 0, () -> toggleRow(row)));
-                // ПКМ по строке тоже раскрывает доп. настройки, если они есть
                 if (hasSub) {
-                    clickAreas.add(new ClickArea(colX + 5, y, mainRight, y + rowHeight, 1, () -> {
-                        row.expanded = !row.expanded;
-                        System.out.println("[Vangix] " + row.title + " options: " + (row.expanded ? "EXPANDED" : "COLLAPSED"));
-                    }));
-                }
-
-                // Стрелочка справа раскрывает/скрывает доп. настройки по ЛКМ и ПКМ
-                if (hasSub) {
-                    int arrowX1 = mainRight + 2;
-                    int arrowX2 = colX + colWidth - 5;
+                    int arrowX1 = mainRight + ARROW_GAP;
+                    int arrowX2 = colX + COL_WIDTH - 5;
                     boolean hoveredArrow = mouseX >= arrowX1 && mouseX <= arrowX2
-                            && mouseY >= y && mouseY < y + rowHeight;
+                            && mouseY >= y && mouseY < y + ROW_HEIGHT;
                     row.arrowHoverAnim = approach(row.arrowHoverAnim, hoveredArrow ? 1.0f : 0.0f, step * 1.5f);
 
-                    context.fill(arrowX1, y, arrowX2, y + rowHeight,
+                    context.fill(arrowX1, y, arrowX2, y + ROW_HEIGHT,
                             withAlpha(row.expanded ? 0x3338BDF8 : 0xFF181E2C, easedOpen));
                     if (row.arrowHoverAnim > 0.01f) {
-                        context.fill(arrowX1, y, arrowX2, y + rowHeight, withAlpha(0x3838BDF8, row.arrowHoverAnim * easedOpen));
+                        context.fill(arrowX1, y, arrowX2, y + ROW_HEIGHT, withAlpha(0x3838BDF8, row.arrowHoverAnim * easedOpen));
                     }
-                    drawFrame(context, arrowX1, y, arrowX2 - arrowX1, rowHeight,
+                    drawFrame(context, arrowX1, y, arrowX2 - arrowX1, ROW_HEIGHT,
                             withAlpha(row.expanded ? 0xFF38BDF8 : 0xFF252F42, easedOpen));
 
                     String arrow = row.expanded ? "v" : ">";
@@ -312,26 +313,19 @@ public class ControlPanelScreen extends Screen {
                             y + 6,
                             withAlpha(row.expanded ? 0xFF38BDF8 : 0xFFCBD5E1, easedOpen)
                     );
-
-                    Runnable toggleExpand = () -> {
-                        row.expanded = !row.expanded;
-                        System.out.println("[Vangix] " + row.title + " options: " + (row.expanded ? "EXPANDED" : "COLLAPSED"));
-                    };
-                    clickAreas.add(new ClickArea(arrowX1, y, arrowX2, y + rowHeight, 0, toggleExpand));
-                    clickAreas.add(new ClickArea(arrowX1, y, arrowX2, y + rowHeight, 1, toggleExpand));
                 }
 
-                yCursor += rowHeight + 2;
+                yCursor += ROW_HEIGHT + ROW_GAP;
 
                 float easedExpand = easeOutCubic(row.expandAnim);
                 if (hasSub && easedExpand > 0.01f) {
-                    int fullSubHeight = row.options.size() * subRowHeight;
+                    int fullSubHeight = row.options.size() * SUB_ROW_HEIGHT;
                     int visibleSubHeight = Math.max(1, Math.round(fullSubHeight * easedExpand));
                     int subTop = Math.round(yCursor);
 
-                    context.fill(colX + 9, subTop, colX + colWidth - 9, subTop + visibleSubHeight,
+                    context.fill(colX + 9, subTop, colX + COL_WIDTH - 9, subTop + visibleSubHeight,
                             withAlpha(0xF00B0E17, easedExpand * easedOpen));
-                    drawFrame(context, colX + 9, subTop, colWidth - 18, visibleSubHeight,
+                    drawFrame(context, colX + 9, subTop, COL_WIDTH - 18, visibleSubHeight,
                             withAlpha(0xFF232D3F, easedExpand * easedOpen));
                     context.fill(colX + 9, subTop, colX + 11, subTop + visibleSubHeight,
                             withAlpha(accentColor, easedExpand * easedOpen));
@@ -345,14 +339,14 @@ public class ControlPanelScreen extends Screen {
                             break;
                         }
 
-                        boolean subHover = mouseX >= colX + 11 && mouseX <= colX + colWidth - 11
-                                && mouseY >= sy && mouseY < sy + subRowHeight
+                        boolean subHover = mouseX >= colX + 11 && mouseX <= colX + COL_WIDTH - 11
+                                && mouseY >= sy && mouseY < sy + SUB_ROW_HEIGHT
                                 && easedExpand > 0.7f;
                         float shAnim = approach(row.subHoverAnim.get(i), subHover ? 1.0f : 0.0f, step * 1.5f);
                         row.subHoverAnim.set(i, shAnim);
 
                         if (shAnim > 0.01f) {
-                            context.fill(colX + 11, sy, colX + colWidth - 11, sy + subRowHeight,
+                            context.fill(colX + 11, sy, colX + COL_WIDTH - 11, sy + SUB_ROW_HEIGHT,
                                     withAlpha(0x28FFFFFF, shAnim * easedExpand * easedOpen));
                         }
 
@@ -368,7 +362,7 @@ public class ControlPanelScreen extends Screen {
 
                             String badge = bVal ? "ON" : "OFF";
                             int subBadgeW = this.font.width(badge) + 6;
-                            int bx = colX + colWidth - 13 - subBadgeW;
+                            int bx = colX + COL_WIDTH - 13 - subBadgeW;
                             context.fill(bx, sy + 2, bx + subBadgeW, sy + 13,
                                     withAlpha(bVal ? 0x3322C55E : 0x33EF4444, easedExpand * easedOpen));
                             context.centeredText(
@@ -378,14 +372,6 @@ public class ControlPanelScreen extends Screen {
                                     sy + 4,
                                     withAlpha(bVal ? 0xFF4ADE80 : 0xFFF87171, easedExpand * easedOpen)
                             );
-
-                            if (easedExpand > 0.65f) {
-                                clickAreas.add(new ClickArea(colX + 9, sy, colX + colWidth - 9, sy + subRowHeight, 0, () -> {
-                                    boolean next = !Boolean.TRUE.equals(bOpt.getter().get());
-                                    bOpt.setter().accept(next);
-                                    System.out.println("[Vangix] " + row.title + " -> " + bOpt.label() + ": " + (next ? "ON" : "OFF"));
-                                }));
-                            }
                         } else if (opt instanceof CycleOption cOpt) {
                             context.text(
                                     this.font,
@@ -398,7 +384,7 @@ public class ControlPanelScreen extends Screen {
                             String valText = cOpt.valueGetter().get();
                             int swatchColor = cOpt.colorGetter().get();
                             int valW = this.font.width(valText);
-                            int textX = colX + colWidth - 13 - valW;
+                            int textX = colX + COL_WIDTH - 13 - valW;
 
                             context.fill(textX - 11, sy + 4, textX - 4, sy + 12, withAlpha(swatchColor, easedExpand * easedOpen));
                             drawFrame(context, textX - 11, sy + 4, 7, 8, withAlpha(0xAAFFFFFF, easedExpand * easedOpen));
@@ -409,19 +395,12 @@ public class ControlPanelScreen extends Screen {
                                     sy + 4,
                                     withAlpha(0xFFFACC15, easedExpand * easedOpen)
                             );
-
-                            if (easedExpand > 0.65f) {
-                                clickAreas.add(new ClickArea(colX + 9, sy, colX + colWidth - 9, sy + subRowHeight, 0, () -> {
-                                    cOpt.cycler().run();
-                                    System.out.println("[Vangix] " + row.title + " -> " + cOpt.label() + ": " + cOpt.valueGetter().get());
-                                }));
-                            }
                         }
 
-                        subY += subRowHeight;
+                        subY += SUB_ROW_HEIGHT;
                     }
 
-                    yCursor += (fullSubHeight + 4) * easedExpand;
+                    yCursor += (fullSubHeight + SUB_BOTTOM_PAD) * easedExpand;
                 }
             }
 
@@ -445,11 +424,68 @@ public class ControlPanelScreen extends Screen {
         double my = event.y();
         int btn = event.button();
 
-        for (ClickArea area : clickAreas) {
-            if (area.button == btn && mx >= area.x1 && mx <= area.x2 && my >= area.y1 && my <= area.y2) {
-                area.action.run();
-                return true;
+        System.out.println("[Vangix] CLICK btn=" + btn + " x=" + mx + " y=" + my + " screen=" + this.width + "x" + this.height);
+
+        int startX = getStartX();
+        int panelIndex = 0;
+
+        for (Map.Entry<String, List<ToolRow>> entry : PANELS.entrySet()) {
+            List<ToolRow> rows = entry.getValue();
+            int colX = startX + panelIndex * (COL_WIDTH + COL_GAP);
+            float yCursor = TOP_BASE_Y + HEADER_HEIGHT;
+
+            for (ToolRow row : rows) {
+                int y = Math.round(yCursor);
+                boolean hasSub = !row.options.isEmpty();
+                int arrowSlotW = hasSub ? (ARROW_WIDTH + ARROW_GAP) : 0;
+                int mainRight = colX + COL_WIDTH - 5 - arrowSlotW;
+
+                if (my >= y && my < y + ROW_HEIGHT) {
+                    if (mx >= colX + 5 && mx <= mainRight) {
+                        if (btn == 0) {
+                            toggleRow(row);
+                            return true;
+                        } else if (btn == 1 && hasSub) {
+                            toggleExpand(row);
+                            return true;
+                        }
+                    } else if (hasSub) {
+                        int arrowX1 = mainRight + ARROW_GAP;
+                        int arrowX2 = colX + COL_WIDTH - 5;
+                        if (mx >= arrowX1 && mx <= arrowX2 && (btn == 0 || btn == 1)) {
+                            toggleExpand(row);
+                            return true;
+                        }
+                    }
+                }
+
+                yCursor += ROW_HEIGHT + ROW_GAP;
+
+                float easedExpand = easeOutCubic(row.expandAnim);
+                if (hasSub && row.expanded && easedExpand > 0.2f) {
+                    int subTop = Math.round(yCursor);
+                    float subY = subTop;
+                    for (SubOption opt : row.options) {
+                        int sy = Math.round(subY);
+                        if (btn == 0 && mx >= colX + 9 && mx <= colX + COL_WIDTH - 9
+                                && my >= sy && my < sy + SUB_ROW_HEIGHT) {
+                            if (opt instanceof BoolOption bOpt) {
+                                boolean next = !Boolean.TRUE.equals(bOpt.getter().get());
+                                bOpt.setter().accept(next);
+                                System.out.println("[Vangix] SUB " + row.title + "." + bOpt.label() + " -> " + next);
+                            } else if (opt instanceof CycleOption cOpt) {
+                                cOpt.cycler().run();
+                                System.out.println("[Vangix] SUB " + row.title + "." + cOpt.label() + " -> " + cOpt.valueGetter().get());
+                            }
+                            return true;
+                        }
+                        subY += SUB_ROW_HEIGHT;
+                    }
+                    yCursor += (row.options.size() * SUB_ROW_HEIGHT + SUB_BOTTOM_PAD) * easedExpand;
+                }
             }
+
+            panelIndex++;
         }
 
         return super.mouseClicked(event, doubleClick);

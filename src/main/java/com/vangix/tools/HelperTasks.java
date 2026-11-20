@@ -3,7 +3,7 @@ package com.vangix.tools;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.BlockState;
@@ -32,7 +32,7 @@ public class HelperTasks {
     public static void renderOverlay(GuiGraphicsExtractor context, float tickDelta) {
         if (!FeatureState.statusHud) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.options.hideGui) return;
+        if (mc.player == null) return;
 
         List<String> enabled = FeatureState.getEnabledTools();
         if (enabled.isEmpty()) return;
@@ -85,7 +85,7 @@ public class HelperTasks {
     }
 
     private static void runOffhandGuard(Minecraft client) {
-        if (guardTimer > 0 || client.screen != null) return;
+        if (guardTimer > 0) return;
         if (client.player.getOffhandItem().is(Items.TOTEM_OF_UNDYING)) return;
 
         Inventory inv = client.player.getInventory();
@@ -102,10 +102,10 @@ public class HelperTasks {
         int containerSlot = targetSlot < 9 ? targetSlot + 36 : targetSlot;
         int offhandSlot = 45;
 
-        client.gameMode.handleInventoryMouseClick(containerId, containerSlot, 0, ClickType.PICKUP, client.player);
-        client.gameMode.handleInventoryMouseClick(containerId, offhandSlot, 0, ClickType.PICKUP, client.player);
+        client.gameMode.handleInventoryMouseClick(containerId, containerSlot, 0, ContainerInput.PICKUP, client.player);
+        client.gameMode.handleInventoryMouseClick(containerId, offhandSlot, 0, ContainerInput.PICKUP, client.player);
         if (!client.player.inventoryMenu.getCarried().isEmpty()) {
-            client.gameMode.handleInventoryMouseClick(containerId, containerSlot, 0, ClickType.PICKUP, client.player);
+            client.gameMode.handleInventoryMouseClick(containerId, containerSlot, 0, ContainerInput.PICKUP, client.player);
         }
 
         guardTimer = nextGuardDelay();

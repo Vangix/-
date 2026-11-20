@@ -1,25 +1,24 @@
 package com.vangix.tools;
 
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
-import net.minecraft.block.entity.*;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.world.chunk.ChunkStatus;
-import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.*;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.status.ChunkStatus;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class WorldOverlayRenderer {
 
-    public static void render(WorldRenderContext context) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.world == null || mc.player == null) return;
+    public static void render() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || mc.player == null) return;
 
         if (FeatureState.entitySight || FeatureState.lineGuides) {
-            for (PlayerEntity player : mc.world.getPlayers()) {
+            for (Player player : mc.level.players()) {
                 if (player == mc.player || !player.isAlive()) continue;
                 if (FeatureState.entitySight && (FeatureState.showEntityTag || FeatureState.showEntityGear)) {
                     summarizeGear(player);
@@ -29,14 +28,14 @@ public class WorldOverlayRenderer {
 
         if (FeatureState.containerSight) {
             int radius = 4;
-            int centerX = mc.player.getChunkPos().x;
-            int centerZ = mc.player.getChunkPos().z;
+            int centerX = mc.player.chunkPosition().x();
+            int centerZ = mc.player.chunkPosition().z();
             for (int dx = -radius; dx <= radius; dx++) {
                 for (int dz = -radius; dz <= radius; dz++) {
                     int cx = centerX + dx;
                     int cz = centerZ + dz;
-                    if (!mc.world.getChunkManager().isChunkLoaded(cx, cz)) continue;
-                    if (!(mc.world.getChunk(cx, cz, ChunkStatus.FULL, false) instanceof WorldChunk chunk)) continue;
+                    if (!mc.level.hasChunk(cx, cz)) continue;
+                    if (!(mc.level.getChunk(cx, cz, ChunkStatus.FULL, false) instanceof LevelChunk chunk)) continue;
                     for (BlockEntity be : chunk.getBlockEntities().values()) {
                         matchBlockColor(be);
                     }
@@ -52,10 +51,10 @@ public class WorldOverlayRenderer {
         if (FeatureState.filterShulkers && be instanceof ShulkerBoxBlockEntity) {
             return new float[]{0.85f, 0.25f, 1.0f};
         }
-        if (FeatureState.filterLogicBlocks && be instanceof CommandBlockBlockEntity) {
+        if (FeatureState.filterLogicBlocks && be instanceof CommandBlockEntity) {
             return new float[]{0.15f, 0.85f, 1.0f};
         }
-        if (FeatureState.filterSpawners && be instanceof MobSpawnerBlockEntity) {
+        if (FeatureState.filterSpawners && be instanceof SpawnerBlockEntity) {
             return new float[]{1.0f, 0.2f, 0.2f};
         }
         if (FeatureState.filterVaultBlocks && be instanceof EnderChestBlockEntity) {
@@ -64,11 +63,11 @@ public class WorldOverlayRenderer {
         return null;
     }
 
-    private static String summarizeGear(PlayerEntity player) {
+    private static String summarizeGear(Player player) {
         List<String> parts = new ArrayList<>();
-        ItemStack main = player.getMainHandStack();
+        ItemStack main = player.getMainHandItem();
         if (!main.isEmpty()) {
-            parts.add("H:" + main.getName().getString());
+            parts.add("H:" + main.getHoverName().getString());
         }
 
         EquipmentSlot[] armorSlots = {
@@ -80,7 +79,7 @@ public class WorldOverlayRenderer {
 
         int pieces = 0;
         for (EquipmentSlot slot : armorSlots) {
-            if (!player.getEquippedStack(slot).isEmpty()) {
+            if (!player.getItemBySlot(slot).isEmpty()) {
                 pieces++;
             }
         }

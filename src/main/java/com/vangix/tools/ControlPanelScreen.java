@@ -132,10 +132,8 @@ public class ControlPanelScreen extends Screen {
         openAnim = approach(openAnim, 1.0f, step * 0.95f);
         float easedOpen = easeOutCubic(openAnim);
 
-        // Мягкая виньетка/затемнение фона
         context.fill(0, 0, this.width, this.height, withAlpha(0x6605080F, easedOpen));
 
-        // Премиальный верхний хедер "Vangix tools" + счётчик активных функций
         int activeCount = FeatureState.getEnabledTools().size();
         String titleText = "Vangix tools";
         String badgeText = activeCount + " ON";
@@ -144,12 +142,10 @@ public class ControlPanelScreen extends Screen {
         int bannerX = (this.width - bannerW) / 2;
         int bannerY = 8 - Math.round((1.0f - easedOpen) * 16.0f);
 
-        // Тень + карточка хедера
         context.fill(bannerX + 2, bannerY + 2, bannerX + bannerW + 2, bannerY + bannerH + 2, withAlpha(0x88000000, easedOpen));
         context.fill(bannerX, bannerY, bannerX + bannerW, bannerY + bannerH, withAlpha(0xF2101520, easedOpen));
         drawFrame(context, bannerX, bannerY, bannerW, bannerH, withAlpha(0xFF334155, easedOpen));
 
-        // Градиентная полоска снизу хедера
         int midX = bannerX + bannerW / 2;
         context.fill(bannerX + 1, bannerY + bannerH - 2, midX, bannerY + bannerH - 1, withAlpha(0xFF38BDF8, easedOpen));
         context.fill(midX, bannerY + bannerH - 2, bannerX + bannerW - 1, bannerY + bannerH - 1, withAlpha(0xFFA855F7, easedOpen));
@@ -210,12 +206,10 @@ public class ControlPanelScreen extends Screen {
 
             int accentColor = panelIndex == 0 ? 0xFF38BDF8 : 0xFFA855F7;
 
-            // Тень и корпус панели
             context.fill(colX + 3, colY + 3, colX + colWidth + 3, colY + panelHeight + 3, withAlpha(0x88000000, easedOpen));
             context.fill(colX, colY, colX + colWidth, colY + panelHeight, withAlpha(0xEE111520, easedOpen));
             drawFrame(context, colX, colY, colWidth, panelHeight, withAlpha(0xFF2B3548, easedOpen));
 
-            // Акцентная шапка колонки
             context.fill(colX + 1, colY + 1, colX + colWidth - 1, colY + 21, withAlpha(0xFF171D2B, easedOpen));
             context.fill(colX + 1, colY + 1, colX + colWidth - 1, colY + 3, withAlpha(accentColor, easedOpen));
             context.centeredText(
@@ -242,7 +236,6 @@ public class ControlPanelScreen extends Screen {
                 boolean active = Boolean.TRUE.equals(row.getter.get());
                 float easedActive = easeOutCubic(row.activeAnim);
 
-                // Карточка строки + левый индикатор активности
                 context.fill(colX + 5, y, mainRight, y + rowHeight, withAlpha(0xFF181E2C, easedOpen));
                 if (easedActive > 0.01f) {
                     context.fill(colX + 5, y, mainRight, y + rowHeight, withAlpha(0x2822C55E, easedActive * easedOpen));
@@ -254,7 +247,6 @@ public class ControlPanelScreen extends Screen {
                 drawFrame(context, colX + 5, y, mainRight - (colX + 5), rowHeight,
                         withAlpha(active ? 0x4422C55E : 0xFF252F42, easedOpen));
 
-                // Название функции
                 int titleX = colX + (active ? 11 : 10);
                 int titleColor = active ? 0xFFFFFFFF : 0xFFCBD5E1;
                 context.text(
@@ -265,7 +257,6 @@ public class ControlPanelScreen extends Screen {
                         withAlpha(titleColor, easedOpen)
                 );
 
-                // Плавный тумблер
                 int toggleW = 22;
                 int toggleH = 11;
                 int toggleX = mainRight - toggleW - 5;
@@ -287,7 +278,6 @@ public class ControlPanelScreen extends Screen {
                     System.out.println("[Vangix] " + row.title + ": " + (next ? "ON" : "OFF"));
                 }));
 
-                // Кнопка стрелочки для раскрытия доп. настроек
                 if (hasSub) {
                     int arrowX1 = mainRight + 2;
                     int arrowX2 = colX + colWidth - 5;
@@ -320,7 +310,6 @@ public class ControlPanelScreen extends Screen {
 
                 yCursor += rowHeight + 2;
 
-                // Выезжающий блок доп. настроек между строками
                 float easedExpand = easeOutCubic(row.expandAnim);
                 if (hasSub && easedExpand > 0.01f) {
                     int fullSubHeight = row.options.size() * subRowHeight;

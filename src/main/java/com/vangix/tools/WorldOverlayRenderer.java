@@ -4,12 +4,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.entity.*;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class WorldOverlayRenderer {
 
@@ -40,6 +42,17 @@ public class WorldOverlayRenderer {
                         matchBlockColor(be);
                     }
                 }
+            }
+        }
+
+        if (FeatureState.areaScanner) {
+            Map<Long, AreaScanCache.ScanResult> flagged = AreaScanCache.getFlaggedChunks();
+            for (Map.Entry<Long, AreaScanCache.ScanResult> entry : flagged.entrySet()) {
+                int cx = ChunkPos.x(entry.getKey());
+                int cz = ChunkPos.z(entry.getKey());
+                int minBlockX = cx * 16;
+                int minBlockZ = cz * 16;
+                if (minBlockX == Integer.MIN_VALUE && minBlockZ == Integer.MIN_VALUE) continue;
             }
         }
     }

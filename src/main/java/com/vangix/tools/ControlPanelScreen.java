@@ -354,14 +354,14 @@ public class ControlPanelScreen extends Screen {
                             );
 
                             String badge = bVal ? "ON" : "OFF";
-                            int badgeW = this.font.width(badge) + 6;
-                            int bx = colX + colWidth - 13 - badgeW;
-                            context.fill(bx, sy + 2, bx + badgeW, sy + 13,
+                            int subBadgeW = this.font.width(badge) + 6;
+                            int bx = colX + colWidth - 13 - subBadgeW;
+                            context.fill(bx, sy + 2, bx + subBadgeW, sy + 13,
                                     withAlpha(bVal ? 0x3322C55E : 0x33EF4444, easedExpand * easedOpen));
                             context.centeredText(
                                     this.font,
                                     Component.literal(badge),
-                                    bx + badgeW / 2,
+                                    bx + subBadgeW / 2,
                                     sy + 4,
                                     withAlpha(bVal ? 0xFF4ADE80 : 0xFFF87171, easedExpand * easedOpen)
                             );

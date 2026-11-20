@@ -3,6 +3,7 @@ package com.vangix.tools;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.BlockState;
@@ -16,16 +17,51 @@ public class HelperTasks {
 
     private static final Random RNG = new Random();
     private static int guardTimer = 0;
+    private static boolean appliedFullbright = false;
+    private static double previousGamma = 0.5;
 
     public static void tick(Minecraft client) {
-        if (client.player == null || client.level == null) return;
+        if (client.player == null || client.level == null) {
+            restoreGammaIfNeeded(client);
+            return;
+        }
 
         if (guardTimer > 0) guardTimer--;
 
         AreaScanCache.tick(client);
+        updateFullbright(client);
 
         if (FeatureState.quickHarvest) runQuickHarvest(client);
         if (FeatureState.offhandGuard) runOffhandGuard(client);
+    }
+
+    private static void updateFullbright(Minecraft client) {
+        if (client.options == null) return;
+        try {
+            var gammaOption = client.options.gamma();
+            if (FeatureState.fullbrightFlag) {
+                if (!appliedFullbright) {
+                    previousGamma = gammaOption.get();
+                    appliedFullbright = true;
+                }
+                if (gammaOption.get() < 15.0) {
+                    gammaOption.set(15.0);
+                }
+            } else {
+                restoreGammaIfNeeded(client);
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static void restoreGammaIfNeeded(Minecraft client) {
+        if (!appliedFullbright || client.options == null) return;
+        try {
+            client.options.gamma().set(previousGamma);
+        } catch (Throwable ignored) {
+        } finally {
+            appliedFullbright = false;
+        }
     }
 
     public static void renderOverlay(GuiGraphicsExtractor context, float tickDelta) {
@@ -44,9 +80,10 @@ public class HelperTasks {
             int textWidth = mc.font.width(label);
             int x = screenWidth - textWidth - 8;
 
-            context.fill(x - 3, y - 1, screenWidth - 5, y + 9, 0x700F172A);
-            context.text(mc.font, label, x, y, color);
-            y += 11;
+            context.fill(x - 4, y - 2, screenWidth - 4, y + 10, 0x990B101B);
+            context.fill(screenWidth - 5, y - 2, screenWidth - 4, y + 10, color);
+            context.text(mc.font, label, x - 1, y, color);
+            y += 12;
         }
     }
 
@@ -95,9 +132,20 @@ public class HelperTasks {
                 break;
             }
         }
-        if (targetSlot == -1 || client.gameMode == null) return;
+        if (targetSlot == -1 || client.gameMode == null || client.player.inventoryMenu == null) return;
 
-        // TODO: уточнить метод клика по контейнеру у MultiPlayerGameMode для 26.3
+        int containerSlot = targetSlot < 9 ? targetSlot + 36 : targetSlot;
+        int containerId = client.player.inventoryMenu.containerId;
+
+        try {
+            client.gameMode.handleInventoryMouseClick(containerId, containerSlot, 0, ClickType.PICKUP, client.player);
+            client.gameMode.handleInventoryMouseClick(containerId, 45, 0, ClickType.PICKUP, client.player);
+            if (!client.player.inventoryMenu.getCarried().isEmpty()) {
+                client.gameMode.handleInventoryMouseClick(containerId, containerSlot, 0, ClickType.PICKUP, client.player);
+            }
+        } catch (Throwable ignored) {
+        }
+
         guardTimer = nextGuardDelay();
     }
 }

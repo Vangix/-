@@ -3,7 +3,6 @@ package com.vangix.tools;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.BlockState;
@@ -132,17 +131,13 @@ public class HelperTasks {
                 break;
             }
         }
-        if (targetSlot == -1 || client.gameMode == null || client.player.inventoryMenu == null) return;
-
-        int containerSlot = targetSlot < 9 ? targetSlot + 36 : targetSlot;
-        int containerId = client.player.inventoryMenu.containerId;
+        if (targetSlot == -1) return;
 
         try {
-            client.gameMode.handleInventoryMouseClick(containerId, containerSlot, 0, ClickType.PICKUP, client.player);
-            client.gameMode.handleInventoryMouseClick(containerId, 45, 0, ClickType.PICKUP, client.player);
-            if (!client.player.inventoryMenu.getCarried().isEmpty()) {
-                client.gameMode.handleInventoryMouseClick(containerId, containerSlot, 0, ClickType.PICKUP, client.player);
-            }
+            ItemStack currentOffhand = inv.getItem(Inventory.SLOT_OFFHAND);
+            ItemStack totemStack = inv.getItem(targetSlot);
+            inv.setItem(Inventory.SLOT_OFFHAND, totemStack);
+            inv.setItem(targetSlot, currentOffhand);
         } catch (Throwable ignored) {
         }
 

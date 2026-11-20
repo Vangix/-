@@ -1,5 +1,6 @@
 package com.vangix.tools;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -96,9 +97,9 @@ public class ControlPanelScreen extends Screen {
 
             int panelHeight = 22 + contentHeight + 6;
 
-            context.fill(startX, startY, startX + colWidth, startY + panelHeight, 0xD014171D);
+            context.fill(startX, startY, startX + colWidth, startY + panelHeight, 0xE614171D);
             drawFrame(context, startX, startY, colWidth, panelHeight, 0xFFE6E9EF);
-            context.centeredText(this.font, header, startX + colWidth / 2, startY + 6, 0xFFFFFF);
+            context.centeredText(this.font, Component.literal(header), startX + colWidth / 2, startY + 6, 0xFFFFFFFF);
 
             int y = startY + 22;
             for (ToolRow row : rows) {
@@ -113,20 +114,23 @@ public class ControlPanelScreen extends Screen {
                     context.fill(startX + 4, y, mainRight, y + rowHeight - 1, 0x35FFFFFF);
                 }
 
-                context.text(this.font, row.title, startX + 8, y + 5, 0xF3F4F6);
+                context.text(this.font, Component.literal(row.title), startX + 8, y + 5, 0xFFF3F4F6);
 
                 int toggleW = 18;
                 int toggleH = 10;
                 int toggleX = mainRight - toggleW - 4;
                 int toggleY = y + 4;
-                boolean active = row.getter.get();
+                boolean active = Boolean.TRUE.equals(row.getter.get());
 
                 context.fill(toggleX, toggleY, toggleX + toggleW, toggleY + toggleH, active ? 0xFF22C55E : 0xFF3F4652);
                 int knobX = active ? (toggleX + toggleW - toggleH) : toggleX;
                 context.fill(knobX, toggleY, knobX + toggleH, toggleY + toggleH, 0xFFFFFFFF);
 
-                clickAreas.add(new ClickArea(startX + 4, y, mainRight, y + rowHeight - 1,
-                        () -> row.setter.accept(!row.getter.get())));
+                clickAreas.add(new ClickArea(startX + 4, y, mainRight, y + rowHeight - 1, () -> {
+                    boolean next = !Boolean.TRUE.equals(row.getter.get());
+                    row.setter.accept(next);
+                    notifyAction(row.title + ": " + (next ? "ON" : "OFF"));
+                }));
 
                 if (hasSub) {
                     int arrowX1 = mainRight + 1;
@@ -138,8 +142,8 @@ public class ControlPanelScreen extends Screen {
                         context.fill(arrowX1, y, arrowX2, y + rowHeight - 1, 0x45FFFFFF);
                     }
 
-                    String arrow = row.expanded ? "▾" : "▸";
-                    context.centeredText(this.font, arrow, (arrowX1 + arrowX2) / 2, y + 5, 0xCBD5E1);
+                    String arrow = row.expanded ? "v" : ">";
+                    context.centeredText(this.font, Component.literal(arrow), (arrowX1 + arrowX2) / 2, y + 5, 0xFFCBD5E1);
 
                     clickAreas.add(new ClickArea(arrowX1, y, arrowX2, y + rowHeight - 1,
                             () -> row.expanded = !row.expanded));
@@ -150,7 +154,7 @@ public class ControlPanelScreen extends Screen {
                 if (row.expanded && hasSub) {
                     int subTop = y;
                     int subHeight = row.options.size() * subRowHeight;
-                    context.fill(startX + 8, subTop, startX + colWidth - 8, subTop + subHeight, 0x990D1015);
+                    context.fill(startX + 8, subTop, startX + colWidth - 8, subTop + subHeight, 0xCC0D1015);
 
                     for (SubOption opt : row.options) {
                         boolean subHover = mouseX >= startX + 8 && mouseX <= startX + colWidth - 8
@@ -160,24 +164,30 @@ public class ControlPanelScreen extends Screen {
                         }
 
                         if (opt instanceof BoolOption bOpt) {
-                            boolean bVal = bOpt.getter().get();
-                            context.text(this.font, bOpt.label(), startX + 12, y + 4, 0xCBD5E1);
+                            boolean bVal = Boolean.TRUE.equals(bOpt.getter().get());
+                            context.text(this.font, Component.literal(bOpt.label()), startX + 12, y + 4, 0xFFCBD5E1);
 
-                            String badge = bVal ? "§aON" : "§cOFF";
+                            String badge = bVal ? "ON" : "OFF";
                             int badgeW = this.font.width(badge);
-                            context.text(this.font, badge, startX + colWidth - 12 - badgeW, y + 4, 0xFFFFFF);
+                            context.text(this.font, Component.literal(badge), startX + colWidth - 12 - badgeW, y + 4,
+                                    bVal ? 0xFF22C55E : 0xFFEF4444);
 
-                            clickAreas.add(new ClickArea(startX + 8, y, startX + colWidth - 8, y + subRowHeight - 1,
-                                    () -> bOpt.setter().accept(!bOpt.getter().get())));
+                            clickAreas.add(new ClickArea(startX + 8, y, startX + colWidth - 8, y + subRowHeight - 1, () -> {
+                                boolean next = !Boolean.TRUE.equals(bOpt.getter().get());
+                                bOpt.setter().accept(next);
+                                notifyAction(bOpt.label() + ": " + (next ? "ON" : "OFF"));
+                            }));
                         } else if (opt instanceof CycleOption cOpt) {
-                            context.text(this.font, cOpt.label(), startX + 12, y + 4, 0xCBD5E1);
+                            context.text(this.font, Component.literal(cOpt.label()), startX + 12, y + 4, 0xFFCBD5E1);
 
-                            String valText = "§e" + cOpt.valueGetter().get();
+                            String valText = cOpt.valueGetter().get();
                             int valW = this.font.width(valText);
-                            context.text(this.font, valText, startX + colWidth - 12 - valW, y + 4, 0xFFFFFF);
+                            context.text(this.font, Component.literal(valText), startX + colWidth - 12 - valW, y + 4, 0xFFFACC15);
 
-                            clickAreas.add(new ClickArea(startX + 8, y, startX + colWidth - 8, y + subRowHeight - 1,
-                                    cOpt.cycler()));
+                            clickAreas.add(new ClickArea(startX + 8, y, startX + colWidth - 8, y + subRowHeight - 1, () -> {
+                                cOpt.cycler().run();
+                                notifyAction(cOpt.label() + ": " + cOpt.valueGetter().get());
+                            }));
                         }
 
                         y += subRowHeight;
@@ -190,6 +200,13 @@ public class ControlPanelScreen extends Screen {
         }
 
         super.extractRenderState(context, mouseX, mouseY, delta);
+    }
+
+    private void notifyAction(String message) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.gui != null && mc.gui.getChat() != null) {
+            mc.gui.getChat().addMessage(Component.literal("[Vangix] " + message));
+        }
     }
 
     private void drawFrame(GuiGraphicsExtractor ctx, int x, int y, int w, int h, int color) {

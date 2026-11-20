@@ -50,7 +50,7 @@ public class ControlPanelScreen extends Screen {
         }
     }
 
-    private record ClickArea(int x1, int y1, int x2, int y2, Runnable action) {}
+    private record ClickArea(int x1, int y1, int x2, int y2, int button, Runnable action) {}
 
     private static final Map<String, List<ToolRow>> PANELS = new LinkedHashMap<>();
 
@@ -122,6 +122,12 @@ public class ControlPanelScreen extends Screen {
         int baseAlpha = (argb >>> 24) & 0xFF;
         int newAlpha = Math.max(0, Math.min(255, Math.round(baseAlpha * Math.max(0.0f, Math.min(1.0f, factor)))));
         return (newAlpha << 24) | (argb & 0x00FFFFFF);
+    }
+
+    private void toggleRow(ToolRow row) {
+        boolean next = !Boolean.TRUE.equals(row.getter.get());
+        row.setter.accept(next);
+        System.out.println("[Vangix] " + row.title + ": " + (next ? "ON" : "OFF"));
     }
 
     @Override
@@ -272,12 +278,17 @@ public class ControlPanelScreen extends Screen {
                 int knobX = toggleX + 1 + Math.round(travel * easedKnob);
                 context.fill(knobX, toggleY + 1, knobX + toggleH - 2, toggleY + toggleH - 1, withAlpha(0xFFFFFFFF, easedOpen));
 
-                clickAreas.add(new ClickArea(colX + 5, y, mainRight, y + rowHeight, () -> {
-                    boolean next = !Boolean.TRUE.equals(row.getter.get());
-                    row.setter.accept(next);
-                    System.out.println("[Vangix] " + row.title + ": " + (next ? "ON" : "OFF"));
-                }));
+                // ЛКМ по основной части строки или тумблеру включает/выключает функцию
+                clickAreas.add(new ClickArea(colX + 5, y, mainRight, y + rowHeight, 0, () -> toggleRow(row)));
+                // ПКМ по строке тоже раскрывает доп. настройки, если они есть
+                if (hasSub) {
+                    clickAreas.add(new ClickArea(colX + 5, y, mainRight, y + rowHeight, 1, () -> {
+                        row.expanded = !row.expanded;
+                        System.out.println("[Vangix] " + row.title + " options: " + (row.expanded ? "EXPANDED" : "COLLAPSED"));
+                    }));
+                }
 
+                // Стрелочка справа раскрывает/скрывает доп. настройки по ЛКМ и ПКМ
                 if (hasSub) {
                     int arrowX1 = mainRight + 2;
                     int arrowX2 = colX + colWidth - 5;
@@ -302,10 +313,12 @@ public class ControlPanelScreen extends Screen {
                             withAlpha(row.expanded ? 0xFF38BDF8 : 0xFFCBD5E1, easedOpen)
                     );
 
-                    clickAreas.add(new ClickArea(arrowX1, y, arrowX2, y + rowHeight, () -> {
+                    Runnable toggleExpand = () -> {
                         row.expanded = !row.expanded;
                         System.out.println("[Vangix] " + row.title + " options: " + (row.expanded ? "EXPANDED" : "COLLAPSED"));
-                    }));
+                    };
+                    clickAreas.add(new ClickArea(arrowX1, y, arrowX2, y + rowHeight, 0, toggleExpand));
+                    clickAreas.add(new ClickArea(arrowX1, y, arrowX2, y + rowHeight, 1, toggleExpand));
                 }
 
                 yCursor += rowHeight + 2;
@@ -367,7 +380,7 @@ public class ControlPanelScreen extends Screen {
                             );
 
                             if (easedExpand > 0.65f) {
-                                clickAreas.add(new ClickArea(colX + 9, sy, colX + colWidth - 9, sy + subRowHeight, () -> {
+                                clickAreas.add(new ClickArea(colX + 9, sy, colX + colWidth - 9, sy + subRowHeight, 0, () -> {
                                     boolean next = !Boolean.TRUE.equals(bOpt.getter().get());
                                     bOpt.setter().accept(next);
                                     System.out.println("[Vangix] " + row.title + " -> " + bOpt.label() + ": " + (next ? "ON" : "OFF"));
@@ -398,7 +411,7 @@ public class ControlPanelScreen extends Screen {
                             );
 
                             if (easedExpand > 0.65f) {
-                                clickAreas.add(new ClickArea(colX + 9, sy, colX + colWidth - 9, sy + subRowHeight, () -> {
+                                clickAreas.add(new ClickArea(colX + 9, sy, colX + colWidth - 9, sy + subRowHeight, 0, () -> {
                                     cOpt.cycler().run();
                                     System.out.println("[Vangix] " + row.title + " -> " + cOpt.label() + ": " + cOpt.valueGetter().get());
                                 }));
@@ -430,35 +443,12 @@ public class ControlPanelScreen extends Screen {
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         double mx = event.x();
         double my = event.y();
+        int btn = event.button();
 
-        if (event.button() == 0) {
-            for (ClickArea area : clickAreas) {
-                if (mx >= area.x1 && mx <= area.x2 && my >= area.y1 && my <= area.y2) {
-                    area.action.run();
-                    return true;
-                }
-            }
-        } else if (event.button() == 1) {
-            int colWidth = 192;
-            int gap = 20;
-            int totalWidth = PANELS.size() * colWidth + (PANELS.size() - 1) * gap;
-            int startX = Math.max(8, (this.width - totalWidth) / 2);
-            int idx = 0;
-            for (List<ToolRow> rows : PANELS.values()) {
-                int colX = startX + idx * (colWidth + gap);
-                float yCursor = 38 + 26.0f;
-                for (ToolRow row : rows) {
-                    int y = Math.round(yCursor);
-                    if (!row.options.isEmpty() && mx >= colX + 5 && mx <= colX + colWidth - 5 && my >= y && my < y + 21) {
-                        row.expanded = !row.expanded;
-                        return true;
-                    }
-                    yCursor += 21 + 2;
-                    if (row.expanded && !row.options.isEmpty()) {
-                        yCursor += (row.options.size() * 16 + 4) * easeOutCubic(row.expandAnim);
-                    }
-                }
-                idx++;
+        for (ClickArea area : clickAreas) {
+            if (area.button == btn && mx >= area.x1 && mx <= area.x2 && my >= area.y1 && my <= area.y2) {
+                area.action.run();
+                return true;
             }
         }
 
